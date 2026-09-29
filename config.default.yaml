@@ -1,0 +1,41 @@
+# ============================================================
+#  蛋白质数据处理系统 - 默认配置（随仓库分发）
+#  ------------------------------------------------------------
+#  本文件是只读模板，请勿直接修改：
+#    · 建议在 Web 界面「系统设置」中修改，保存后写入 config.local.yaml；
+#    · 也可手动复制为 config.local.yaml 后编辑（该文件已被 .gitignore 忽略）。
+#  生效优先级： config.local.yaml  >  本文件默认值
+# ============================================================
+
+web:
+  # Web 服务端口；0 = 自动探测空闲端口（推荐）
+  port: 0
+  # 监听地址；仅本机访问保持 127.0.0.1
+  host: 127.0.0.1
+  # 启动后是否自动打开浏览器
+  open_browser: true
+
+paths:
+  # 运行时根目录（相对路径按工程目录解析，也可填绝对路径）
+  runtime_dir: runtime
+  # 以下留空 = <runtime_dir>/<对应子目录>
+  data_dir: ""      # 输入数据存放位置
+  output_dir: ""    # 流水线结果的默认输出位置
+  logs_dir: ""      # 日志
+  temp_dir: ""      # 临时文件
+  sessions_dir: ""  # 会话数据
+  backups_dir: ""   # DSH 配置备份（settings.yaml / .credentials.yaml）
+
+dsh:
+  # DeepSeek Harness Web 端口
+  port: 3080
+  # DSH 文件访问权限：read-only / workspace-write / danger-full-access
+  # 默认收紧为 workspace-write（仅工程工作区可写）
+  permission_mode: workspace-write
+
+pipeline:
+  # 匹配容差默认值（界面可改）
+  default_tolerance: 50
+  default_tolerance_unit: ppm
+  # 肽段爬取并发线程数
+  max_workers: 5

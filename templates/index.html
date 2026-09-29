@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>蛋白质数据处理系统</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<!-- 顶栏 -->
+<div class="topbar">
+  <div class="logo"><div class="logo-badge">P</div>蛋白质数据处理系统</div>
+  <div class="topbar-right">
+    <div class="status" id="top-status"><span class="status-dot"></span><span id="top-status-text">连接中…</span></div>
+    <button class="btn quit-btn" id="btn-shutdown" title="停止本地服务">退出服务</button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- 左侧导航 -->
+  <div class="sidebar">
+    <div class="side-group">功能</div>
+    <div class="nav-item active" data-page="pipeline"><span class="nav-icon">⌗</span>肽段匹配</div>
+    <div class="nav-item" data-page="step2"><span class="nav-icon">⇣</span>蛋白爬虫</div>
+    <div class="nav-item" data-page="step3"><span class="nav-icon">≋</span>分段匹配</div>
+    <div class="nav-item" data-page="step4"><span class="nav-icon">◎</span>数据分析</div>
+    <div class="nav-item" data-page="runs"><span class="nav-icon">◷</span>运行记录</div>
+    <div class="nav-sep"></div>
+    <div class="side-group">分析</div>
+    <div class="nav-item" data-page="monitor"><span class="nav-icon">◉</span>运行监控</div>
+    <div class="nav-item" data-page="anomaly"><span class="nav-icon">⚠</span>异常检测</div>
+    <div class="nav-item" data-page="result-analysis"><span class="nav-icon">∑</span>结果分析</div>
+    <div class="nav-item" data-page="ai-code"><span class="nav-icon">⌘</span>代码审查</div>
+    <div class="nav-item" data-page="qa"><span class="nav-icon">?</span>问答</div>
+    <div class="nav-sep"></div>
+    <div class="side-group">设置</div>
+    <div class="nav-item" data-page="dsh-config"><span class="nav-icon">⚙</span>DSH 模型配置</div>
+    <div class="nav-item" data-page="settings"><span class="nav-icon">⚙</span>系统设置</div>
+  </div>
+
+  <!-- 主内容 -->
+  <div class="content">
+
+    <!-- ============ 主工作区：肽段匹配流水线 ============ -->
+    <div class="page" id="page-pipeline">
+      <div class="panel work">
+        <div class="panel-head">
+          <span>四步流水线 · 蛋白初筛 → 肽段爬取 → 肽段匹配 → 蛋白分析</span>
+          <div class="actions">
+            <button class="btn" id="btn-open-output">打开输出文件夹</button>
+            <button class="btn" id="btn-ai">AI 分析</button>
+            <button class="btn primary" id="btn-run">开始处理</button>
+            <button class="btn danger" id="btn-stop" disabled>停止</button>
+          </div>
+        </div>
+
+        <!-- 输入参数区 -->
+        <details class="params-wrap" open>
+          <summary>输入参数</summary>
+          <div class="params-body">
+
+            <div class="param-group">
+              <div class="group-title">数据目录</div>
+              <div class="folder-grid">
+                <div class="folder-row" data-target="reference_file">
+                  <label>参考文件</label>
+                  <div class="folder-input"><input type="text" id="reference_file" placeholder="参考蛋白质质量 .xlsx 文件（含 Mass 列）" readonly>
+                    <button class="btn browse-btn" type="button">浏览…</button></div>
+                  <span class="field-hint">Step 1 参考 Mass 来源（直接选择 .xlsx 文件，不再自动取目录）</span>
+                </div>
+                <div class="folder-row" data-target="protein_folder">
+                  <label>蛋白文件夹</label>
+                  <div class="folder-input"><input type="text" id="protein_folder" placeholder="实验数据：含 m/z 列的 .xlsx" readonly>
+                    <button class="btn browse-btn" type="button">浏览…</button></div>
+                  <span class="field-hint">Step 1 实验 m/z 来源</span>
+                </div>
+                <div class="folder-row" data-target="peptide_folder">
+                  <label>肽段文件夹</label>
+                  <div class="folder-input"><input type="text" id="peptide_folder" placeholder="实验数据：含 m/z 列的 .xlsx" readonly>
+                    <button class="btn browse-btn" type="button">浏览…</button></div>
+                  <span class="field-hint">Step 3 实验 m/z 来源</span>
+                </div>
+                <div class="folder-row" data-target="output_folder">
+                  <label>输出文件夹</label>
+                  <div class="folder-input"><input type="text" id="output_folder" placeholder="结果 Excel 与 run_log.json 保存位置" readonly>
+                    <button class="btn browse-btn" type="button">浏览…</button></div>
+                  <span class="field-hint">每步结果 Excel + run_log.json 输出到此目录</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="param-row">
+              <div class="param-group">
+                <div class="group-title">匹配容差</div>
+                <div class="inline-field">
+                  <input type="number" id="tolerance_value" step="any" min="0.0001" value="50">
+                  <select id="tolerance_unit">
+                    <option value="ppm">ppm</option>
+                    <option value="Da">Da</option>
+                    <option value="%">%</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="param-group">
+                <div class="group-title">酶切参数</div>
+                <div class="field-grid">
+                  <div class="field-item">
+                    <label>Enzyme</label>
+                    <select id="enzyme"></select>
+                  </div>
+                  <div class="field-item">
+                    <label>Allow for</label>
+                    <div class="inline-field">
+                      <select id="missed_cleavages">
+                        <option value="0">0</option><option value="1">1</option><option value="2">2</option>
+                        <option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                      </select>
+                      <span class="unit-text">missed cleavages</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="param-group">
+              <div class="group-title">修饰与离子（与 Expasy PeptideMass 参数一致）</div>
+              <div class="field-grid">
+                <div class="field-item">
+                  <label>with cysteines treated with</label>
+                  <select id="cys_reagent"></select>
+                </div>
+                <div class="field-item checkbox-item">
+                  <label><input type="checkbox" id="cys_acrylamide"> with acrylamide adducts</label>
+                </div>
+                <div class="field-item checkbox-item">
+                  <label><input type="checkbox" id="met_oxidized"> with methionines oxidized</label>
+                </div>
+                <div class="field-item">
+                  <label>离子类型</label>
+                  <select id="ion_type"></select>
+                </div>
+                <div class="field-item">
+                  <label>Mass calculation</label>
+                  <select id="mass_type"></select>
+                </div>
+              </div>
+            </div>
+
+            <div class="param-group">
+              <div class="group-title">显示范围</div>
+              <div class="field-grid">
+                <div class="field-item">
+                  <label>Display peptides with mass bigger than</label>
+                  <select id="min_mass"></select>
+                </div>
+                <div class="field-item">
+                  <label>and smaller than</label>
+                  <select id="max_mass"></select>
+                </div>
+                <div class="field-item">
+                  <label>sorted by</label>
+                  <select id="sort_by"></select>
+                </div>
+              </div>
+            </div>
+
+            <div class="param-group">
+              <div class="group-title">For UniProtKB (Swiss-Prot/TrEMBL) entries only: 每条肽段展示</div>
+              <div class="uni-grid">
+                <label class="uni-item"><input type="checkbox" id="show_ptm"> 所有已知翻译后修饰 (PTM)</label>
+                <label class="uni-item"><input type="checkbox" id="show_conflict"> 所有数据库冲突</label>
+                <label class="uni-item"><input type="checkbox" id="show_variant"> 所有变异 (多态性)</label>
+                <label class="uni-item"><input type="checkbox" id="show_varsplice"> 所有 mRNA 剪接变体</label>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- 运行进度 -->
+        <div class="run-status-bar">
+          <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+          <div class="step-label" id="step-label">就绪</div>
+        </div>
+
+        <!-- 四步产物 -->
+        <div class="result-area" id="result-area"></div>
+
+        <!-- 日志流（贴底终端：无日志时隐藏，运行后自动出现） -->
+        <div class="log-box" id="log-box"></div>
+      </div>
+
+      <!-- 分析输出区 -->
+      <div class="panel analyze-out">
+        <div class="panel-head">
+          <span>分析结果</span>
+          <div class="actions"><button class="btn" id="btn-ai-2">AI 分析 (DSH)</button></div>
+        </div>
+        <div class="msg-list" id="analysis-msg">
+          <div class="msg">
+            <div class="meta">系统就绪</div>
+            完成四步流水线后，此处将展示统计汇总；点击「AI 分析」可拉起 DeepSeek Harness 对本轮 run_log.json 与结果 Excel 进行智能分析。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 子步骤页（并入主流水线，真实说明页） ============ -->
+    <div class="page hidden" id="page-step2">
+      <div class="panel work">
+        <div class="panel-head"><span>蛋白爬虫 · Step 2</span></div>
+        <div class="step-page-body">
+          <p>本步骤已并入主工作区「四步流水线」。功能：读取 Step 1 蛋白结果中的蛋白 ID，请求 Expasy PeptideMass 抓取理论肽段，产物保存为 <code>peptide_crawl_database.xlsx</code>。</p>
+          <p>运行结果表格显示在主工作区的「Step 2 · 肽段爬取」产物卡片中，回到 <button class="btn mini" id="go-pipeline-step2">肽段匹配页</button> 查看。</p>
+          <p class="placeholder-note">提示：下方不会展示假数据，一切以真实运行产物为准。</p>
+        </div>
+      </div>
+    </div>
+    <div class="page hidden" id="page-step3">
+      <div class="panel work">
+        <div class="panel-head"><span>分段匹配 · Step 3</span></div>
+        <div class="step-page-body">
+          <p>本步骤已并入主工作区「四步流水线」。功能：将 Step 2 抓取的理论肽段质量与实验 m/z 做容差匹配，产物保存为 <code>peptide_match_result.xlsx</code>。</p>
+          <p>运行结果表格显示在主工作区的「Step 3 · 肽段匹配」产物卡片中，回到 <button class="btn mini" id="go-pipeline-step3">肽段匹配页</button> 查看。</p>
+        </div>
+      </div>
+    </div>
+    <div class="page hidden" id="page-step4">
+      <div class="panel work">
+        <div class="panel-head"><span>数据分析 · Step 4</span></div>
+        <div class="step-page-body">
+          <p>本步骤已并入主工作区「四步流水线」。功能：基于 Step 3 匹配结果统计肽段数、覆盖率与置信度星级，产物保存为 <code>protein_analysis_result.xlsx</code>。</p>
+          <p>运行结果表格显示在主工作区的「Step 4 · 蛋白分析」产物卡片中，回到 <button class="btn mini" id="go-pipeline-step4">肽段匹配页</button> 查看。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 运行记录 ============ -->
+    <div class="page hidden" id="page-runs">
+      <div class="panel work">
+        <div class="panel-head">
+          <span>运行记录</span>
+          <div class="actions"><button class="btn" id="btn-load-run-log">选择输出文件夹加载 run_log.json</button></div>
+        </div>
+        <div class="runs-body" id="runs-body">
+          <div class="runs-empty">暂无运行记录。在主工作区运行一次任务后，此处会展示最近一次运行摘要。</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 运行监控 ============ -->
+    <div class="page hidden" id="page-monitor">
+      <div class="panel work">
+        <div class="panel-head"><span>运行监控</span></div>
+        <div class="step-page-body">
+          <p>实时监控当前流水线任务的进度、当前步骤与日志流，与主工作区同步。</p>
+          <p>状态：<strong id="monitor-step">—</strong>　进度：<span class="mono" id="monitor-progress">—</span></p>
+          <button class="btn primary" id="go-monitor-pipeline">前往主工作区查看</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 异常检测 ============ -->
+    <div class="page hidden" id="page-anomaly">
+      <div class="panel work">
+        <div class="panel-head"><span>异常检测</span></div>
+        <div class="step-page-body" id="anomaly-body">
+          <p>基于最近一次运行记录 run_log.json 检查：步骤失败、抓取失败蛋白、空结果、低置信度蛋白。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 结果分析 ============ -->
+    <div class="page hidden" id="page-result-analysis">
+      <div class="panel work">
+        <div class="panel-head"><span>结果分析</span></div>
+        <div class="step-page-body" id="result-analysis-body">
+          <p>汇总最近一次运行的蛋白/肽段统计信息。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 代码审查 / 问答 ============ -->
+    <div class="page hidden" id="page-ai-code">
+      <div class="panel work">
+        <div class="panel-head"><span>代码审查 · AI 分析</span></div>
+        <div class="step-page-body">
+          <p>DeepSeek Harness (DSH) 支持代码审查。点击按钮拉起 DSH Web 界面后，可让 AI 读取项目代码与 run_log.json 进行审查。</p>
+          <button class="btn primary" id="btn-ai-code">拉起 DSH 代码审查</button>
+        </div>
+      </div>
+    </div>
+    <div class="page hidden" id="page-qa">
+      <div class="panel work">
+        <div class="panel-head"><span>问答 · AI 分析</span></div>
+        <div class="step-page-body">
+          <p>针对本轮运行结果提问？拉起 DeepSeek Harness (DSH) Web 界面后，可在其中输入自然语言问题，AI 将读取 run_log.json 与四步结果 Excel 作答。</p>
+          <button class="btn primary" id="btn-qa-ai">拉起 DSH 问答</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ DSH 模型配置 ============ -->
+    <div class="page hidden" id="page-dsh-config">
+      <div class="panel work">
+        <div class="panel-head">
+          <span>新建 / 编辑自定义 DSH 模型（OpenAI 兼容网关）</span>
+          <div class="actions">
+            <button class="btn" id="dsh-btn-clear">清空表单</button>
+            <button class="btn" id="dsh-btn-discover">连通性 / 模型发现</button>
+            <button class="btn primary" id="dsh-btn-save">保存配置</button>
+          </div>
+        </div>
+        <div class="params-wrap">
+          <div class="params-body">
+            <div class="param-group">
+              <div class="group-title">网关信息</div>
+              <div class="folder-grid">
+                <div class="folder-row">
+                  <label>厂商显示名</label>
+                  <div class="folder-input"><input type="text" id="dsh_display_name" placeholder="如 Agnes AI"></div>
+                  <span class="field-hint">用于生成路由键 slug；也可留空，在下方手动填「路由键」</span>
+                </div>
+                <div class="folder-row">
+                  <label>路由键</label>
+                  <div class="folder-input"><input type="text" id="dsh_route" placeholder="如 agnes-ai（留空则按显示名自动生成）"></div>
+                  <span class="field-hint">只允许小写字母 / 数字 / 连字符；例：Agnes AI → agnes-ai</span>
+                </div>
+                <div class="folder-row">
+                  <label>BaseURL</label>
+                  <div class="folder-input"><input type="text" id="dsh_base_url" placeholder="https://apihub.agnes-ai.com/v1"></div>
+                  <span class="field-hint">OpenAI 兼容网关地址，保存后请求会指向 {baseURL}/chat/completions</span>
+                </div>
+                <div class="folder-row">
+                  <label>API Key</label>
+                  <div class="folder-input"><input type="password" id="dsh_api_key" placeholder="sk-…（明文仅写入 ~/.dsh/.credentials.yaml）"></div>
+                  <span class="field-hint">绝不写入 settings.yaml；留空保存时若路由已存在则保留旧 Key 不变</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="param-group">
+              <div class="group-title">模型 ID 列表</div>
+              <textarea id="dsh_models" rows="4" placeholder="每行一个模型 ID&#10;例如：&#10;agnes-chat-v1&#10;agnes-think-v2" style="width:100%;border:1px solid #d0d3d9;border-radius:4px;padding:6px 8px;font-size:12px;font-family:Consolas,monospace;resize:vertical;background:#fff;color:#333;"></textarea>
+              <div class="field-hint" style="margin-top:4px;">至少 1 个；也可用上方「模型发现」拉取网关候选后勾选追加</div>
+            </div>
+
+            <div class="param-group">
+              <div class="checkbox-item" style="display:flex;align-items:center;">
+                <label style="display:flex;align-items:center;gap:5px;"><input type="checkbox" id="dsh_set_default"> 保存后设为默认模型（provider = 该路由，model = 第一个模型 ID）</label>
+              </div>
+              <div class="field-hint" style="margin-top:2px;">勾选会把 <span class="mono">agent-default-model</span> 指向本路由；取消勾选不影响已有默认设置</div>
+            </div>
+
+            <div class="param-group hidden" id="dsh-discover-box">
+              <div class="group-title">模型发现结果（勾选后自动追加到上方模型列表）</div>
+              <div id="dsh-discover-list" style="display:flex;flex-wrap:wrap;gap:6px;max-height:180px;overflow-y:auto;padding:2px;"></div>
+            </div>
+          </div>
+        </div>
+        <div class="msg-list" id="dsh-msg" style="max-height:140px;overflow-y:auto;border-top:1px solid #eef0f2;"></div>
+      </div>
+
+      <div class="panel work">
+        <div class="panel-head">
+          <span>已配置路由（llm-pi-ai.providers，凭据用 <span class="mono">refs</span> 引用，列表不显示密钥）</span>
+          <div class="actions">
+            <button class="btn" id="dsh-btn-refresh">刷新列表</button>
+            <button class="btn danger" id="dsh-btn-restore">恢复 DeepSeek 默认</button>
+          </div>
+        </div>
+        <div class="runs-body" id="dsh-provider-list">
+          <div class="runs-empty">加载中…</div>
+        </div>
+      </div>
+
+      <div class="panel work">
+        <div class="panel-head"><span>说明</span></div>
+        <div class="step-page-body">
+          <p>保存成功后 settings 会<strong>热重载即时生效</strong>，无需重启 DSH Web（DSH 每操作读取一次 profile）。</p>
+          <p>配置落点：<span class="mono" id="dsh-settings-path">~/.dsh/settings.yaml</span>　凭据落点：<span class="mono" id="dsh-credentials-path">~/.dsh/.credentials.yaml</span></p>
+          <p class="placeholder-note">默认模型当前为：<span class="mono" id="dsh-current-default">—</span>；「恢复 DeepSeek 默认」仅清除本板块新增的用户路由与对应凭据，不影响内置 DeepSeek。</p>
+        </div>
+      </div>
+    </div>
+    <!-- ============ 系统设置 ============ -->
+    <div class="page hidden" id="page-settings">
+      <div class="panel work">
+        <div class="panel-head">
+          <span>常用设置（保存后写入本机 config.local.yaml，不修改仓库默认配置）</span>
+          <div class="actions">
+            <button class="btn" id="set-btn-reload">重新载入</button>
+            <button class="btn primary" id="set-btn-save">保存设置</button>
+          </div>
+        </div>
+        <div class="params-wrap">
+          <div class="params-body">
+            <div class="param-group">
+              <div class="group-title">Web 服务</div>
+              <div class="folder-grid">
+                <div class="folder-row">
+                  <label>Web 端口</label>
+                  <div class="folder-input"><input type="number" id="set_web_port" min="0" max="65535" step="1" placeholder="0 = 自动选择空闲端口"></div>
+                  <span class="field-hint">0 表示自动探测空闲端口；修改后需重启服务生效</span>
+                </div>
+                <div class="folder-row">
+                  <label>启动行为</label>
+                  <div class="folder-input"><label style="display:flex;align-items:center;gap:5px;"><input type="checkbox" id="set_open_browser"> 启动后自动打开浏览器</label></div>
+                  <span class="field-hint">关闭后启动仅打印访问地址</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="param-group">
+              <div class="group-title">DSH（AI 分析）</div>
+              <div class="folder-grid">
+                <div class="folder-row">
+                  <label>DSH 端口</label>
+                  <div class="folder-input"><input type="number" id="set_dsh_port" min="1" max="65535" step="1" placeholder="3080"></div>
+                  <span class="field-hint">DSH Web 界面端口，被占用时可在此修改</span>
+                </div>
+                <div class="folder-row">
+                  <label>文件访问权限</label>
+                  <div class="folder-input"><select id="set_dsh_permission"></select></div>
+                  <span class="field-hint">workspace-write 仅允许写入工程工作区（推荐）；danger-full-access 放开全部文件访问，保存后即时生效</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="param-group">
+              <div class="group-title">数据目录（留空 = 默认位置；相对路径按工程目录解析）</div>
+              <div class="folder-grid">
+                <div class="folder-row">
+                  <label>运行时根目录</label>
+                  <div class="folder-input"><input type="text" id="set_runtime_dir" placeholder="留空 = 默认位置"></div>
+                  <span class="field-hint" id="hint_runtime_dir">留空 = 工程目录下的 runtime/</span>
+                </div>
+                <div class="folder-row">
+                  <label>输入数据目录</label>
+                  <div class="folder-input"><input type="text" id="set_data_dir" placeholder="留空 = 默认位置"></div>
+                  <span class="field-hint" id="hint_data_dir">留空 = 运行时根目录/data</span>
+                </div>
+                <div class="folder-row">
+                  <label>结果输出目录</label>
+                  <div class="folder-input"><input type="text" id="set_output_dir" placeholder="留空 = 默认位置"></div>
+                  <span class="field-hint" id="hint_output_dir">留空 = 运行时根目录/output</span>
+                </div>
+                <div class="folder-row">
+                  <label>日志目录</label>
+                  <div class="folder-input"><input type="text" id="set_logs_dir" placeholder="留空 = 默认位置"></div>
+                  <span class="field-hint" id="hint_logs_dir">留空 = 运行时根目录/logs</span>
+                </div>
+                <div class="folder-row">
+                  <label>临时文件目录</label>
+                  <div class="folder-input"><input type="text" id="set_temp_dir" placeholder="留空 = 默认位置"></div>
+                  <span class="field-hint" id="hint_temp_dir">留空 = 运行时根目录/temp</span>
+                </div>
+                <div class="folder-row">
+                  <label>会话数据目录</label>
+                  <div class="folder-input"><input type="text" id="set_sessions_dir" placeholder="留空 = 默认位置"></div>
+                  <span class="field-hint" id="hint_sessions_dir">留空 = 运行时根目录/sessions</span>
+                </div>
+                <div class="folder-row">
+                  <label>DSH 配置备份目录</label>
+                  <div class="folder-input"><input type="text" id="set_backups_dir" placeholder="留空 = 默认位置"></div>
+                  <span class="field-hint" id="hint_backups_dir">留空 = 运行时根目录/backups</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="param-group">
+              <div class="group-title">环境信息（只读）</div>
+              <div class="step-page-body">
+                <p>运行时根目录：<span class="mono" id="set_runtime_root">—</span></p>
+                <p>本机配置文件：<span class="mono" id="set_config_path">—</span></p>
+                <p>Python 版本：<span class="mono" id="set_python">—</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="msg-list" id="set-msg" style="max-height:140px;overflow-y:auto;border-top:1px solid #eef0f2;"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 目录树选择器 -->
+<div class="modal-mask hidden" id="dir-modal">
+  <div class="modal">
+    <div class="modal-head"><span id="dir-modal-title">选择文件夹</span><button class="btn close-btn" id="dir-modal-close">×</button></div>
+    <div class="dir-crumb" id="dir-crumb"></div>
+    <div class="dir-list" id="dir-list"></div>
+    <div class="modal-foot">
+      <div class="dir-current" id="dir-current">未选择</div>
+      <div class="modal-actions">
+        <button class="btn" id="dir-modal-cancel">取消</button>
+        <button class="btn primary" id="dir-modal-ok" disabled>选择此文件夹</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 底部状态条 -->
+<div class="statusbar">
+  <span id="sb-ready">就绪</span>
+  <span id="sb-last">最近任务：—</span>
+  <span style="margin-left:auto">v4.0</span>
+</div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
