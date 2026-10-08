@@ -1,0 +1,24 @@
+# ---------- 运行时数据（备份 / 输出 / 日志 / 临时 / 会话） ----------
+runtime/
+
+# ---------- 本机私有配置 ----------
+config.local.yaml
+
+# ---------- DSH 会话产物 ----------
+DSH_CONTEXT.md
+dsh-session-*/
+*.log
+
+# ---------- Python ----------
+.venv*/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# ---------- 编辑器 / 系统 ----------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

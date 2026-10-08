@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+# 基于质谱峰的蛋白质匹配软件 V1.0
+# Copyright (c) 2026 张葛阳
+# 本软件为独立开发，未使用第三方开源代码
 """Step 4: Protein analysis and formatting with coverage/peptide count stats"""
 import pandas as pd, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -69,7 +72,7 @@ def analyze_proteins(input_file, output_file):
 
 def build_repeat_matrix(input_file, output_file):
     """
-    平移旧版 create_correct_format：按实验组统计每个蛋白的肽段重复情况。
+    按实验组统计每个蛋白的肽段重复情况。
     输入为 Step3 肽段匹配结果（列含 Experiment_File / Protein_ID / mass 或
     Theoretical_mass / m/z / position / peptide_sequence）。
     每个蛋白输出 5 行：[蛋白ID行(含组重复计数), mass行, m/z行, position行,
@@ -81,7 +84,7 @@ def build_repeat_matrix(input_file, output_file):
     required = ["Experiment_File", "Protein_ID", "mass", "m/z", "position", "peptide_sequence"]
     missing = [c for c in required if c not in df.columns]
     if missing:
-        # 与旧版 create_correct_format 一致：缺列时抛错（由调用方捕获并如实上报），
+        # 与其他处理模块保持一致：缺列时抛错（由调用方捕获并如实上报），
         # 不再静默返回 None 吞掉问题。
         raise ValueError(f"Repeat matrix: missing column(s) {missing} in {input_file}")
 

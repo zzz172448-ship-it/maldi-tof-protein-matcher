@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
+# 基于质谱峰的蛋白质匹配软件 V1.0
+# Copyright (c) 2026 张葛阳
+# 本软件为独立开发，未使用第三方开源代码
 """
-Protein Data Processing System - Local Web UI (Flask)
+基于质谱峰的蛋白质匹配软件 - Local Web UI (Flask)
 Reuses the same shared core modules of the four-step pipeline:
   Step1 protein_matcher_core / Step2 peptide_crawler_core /
   Step3 peptide_matcher_core / Step4 protein_analyzer_core
@@ -44,7 +47,7 @@ OUTPUT_EXTENSIONS = (".xlsx", ".xls", ".xlsm")
 
 # 运行时目录（备份 / 输出 / 日志 / 临时 / 会话）统一由 app_paths 提供：
 # 默认落在工程内 runtime/ 下，首次运行自动创建；可用 config.local.yaml
-# （Web 界面「设置」页）或 DSH_* 环境变量覆盖。
+# （Web 界面「系统设置」页）或 DSH_* 环境变量覆盖。
 AP.ensure_runtime_dirs()
 
 # DSH 模型配置备份目录：保存/删除/恢复默认等写操作前，
@@ -1078,7 +1081,7 @@ def api_dsh_provider_restore():
 #  Entry point
 # ============================================================
 # ============================================================
-#  系统设置（Web 界面「设置」页）：读写 config.local.yaml
+#  系统设置（Web 界面「系统设置」页）：读写 config.local.yaml
 # ============================================================
 PATH_SETTING_KEYS = ("runtime_dir", "data_dir", "output_dir", "logs_dir",
                      "temp_dir", "sessions_dir", "backups_dir")
@@ -1206,7 +1209,7 @@ def main():
     url = f"http://127.0.0.1:{port}/"
 
     print("=" * 56)
-    print("  Protein Data Processing System - Web UI")
+    print("  基于质谱峰的蛋白质匹配软件 - Web UI")
     print(f"  URL    : {url}")
     print(f"  Runtime: {AP.RUNTIME_DIR}")
     print("  按 Ctrl+C 停止服务，或点击页面右上角「退出服务」")

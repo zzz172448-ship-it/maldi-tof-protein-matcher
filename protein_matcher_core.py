@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+# 基于质谱峰的蛋白质匹配软件 V1.0
+# Copyright (c) 2026 张葛阳
+# 本软件为独立开发，未使用第三方开源代码
 """Step 1: Protein initial matching - Reference Mass vs Experiment m/z"""
 import pandas as pd, os, glob, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -84,7 +87,7 @@ def match_proteins(reference_file, experiment_folder, output_folder, tolerance=0
                     # 参考蛋白行整行带出（保留原列名，同名冲突以参考行为准）
                     matched.update(ref["row"])
                     all_results.append(matched)
-                    # 不 break：保留同一实验峰命中的所有参考蛋白（与旧版一致）
+                    # 不 break：保留同一实验峰命中的所有参考蛋白（与其他处理模块保持一致）
     
     if all_results:
         result_df = pd.DataFrame(all_results)

@@ -1,5 +1,8 @@
-﻿# ============================================================
-#  env_bootstrap.ps1 - Protein Data Processing System environment bootstrap
+﻿# 基于质谱峰的蛋白质匹配软件 V1.0
+# Copyright (c) 2026 张葛阳
+# 本软件为独立开发，未使用第三方开源代码
+# ============================================================
+#  env_bootstrap.ps1 - 基于质谱峰的蛋白质匹配软件 environment bootstrap
 #  Called automatically by run.bat when the project virtualenv is missing.
 #    1. Locate a system Python interpreter (>= 3.9) - PATH / registry / common paths
 #    2. Create the project-local virtual environment (.venv)
@@ -152,7 +155,7 @@ function Show-StatusForm {
         [bool]$PythonOk
     )
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = "Environment Check - Protein Data Processing System"
+    $form.Text = "Environment Check - 基于质谱峰的蛋白质匹配软件"
     $form.Size = New-Object System.Drawing.Size(520, 460)
     $form.StartPosition = 'CenterScreen'
     $form.FormBorderStyle = 'FixedDialog'

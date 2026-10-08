@@ -1,16 +1,21 @@
+<!--
+  基于质谱峰的蛋白质匹配软件 V1.0
+  Copyright (c) 2026 张葛阳
+  本软件为独立开发，未使用第三方开源代码
+-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>蛋白质数据处理系统</title>
+<title>基于质谱峰的蛋白质匹配软件</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
 
 <!-- 顶栏 -->
 <div class="topbar">
-  <div class="logo"><div class="logo-badge">P</div>蛋白质数据处理系统</div>
+  <div class="logo"><div class="logo-badge">P</div>基于质谱峰的蛋白质匹配软件</div>
   <div class="topbar-right">
     <div class="status" id="top-status"><span class="status-dot"></span><span id="top-status-text">连接中…</span></div>
     <button class="btn quit-btn" id="btn-shutdown" title="停止本地服务">退出服务</button>
@@ -506,7 +511,7 @@
 <div class="statusbar">
   <span id="sb-ready">就绪</span>
   <span id="sb-last">最近任务：—</span>
-  <span style="margin-left:auto">v4.0</span>
+  <span style="margin-left:auto">V1.0</span>
 </div>
 
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>

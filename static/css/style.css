@@ -1,6 +1,9 @@
+/* 基于质谱峰的蛋白质匹配软件 V1.0
+   Copyright (c) 2026 张葛阳
+   本软件为独立开发，未使用第三方开源代码 */
 /* ============================================================
-   蛋白质数据处理系统 - 本地 Web UI
-   视觉 1:1 还原 prod_1a0591fd290_c088ae019637_fourmix_dsh_ui_v2.html
+   基于质谱峰的蛋白质匹配软件 - 本地 Web UI
+   视觉依据本项目 UI 设计稿实现
    ============================================================ */
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family:"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif; background:#f5f6f8; color:#333; height:100vh; display:flex; flex-direction:column; }

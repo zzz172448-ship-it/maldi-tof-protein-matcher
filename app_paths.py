@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+# 基于质谱峰的蛋白质匹配软件 V1.0
+# Copyright (c) 2026 张葛阳
+# 本软件为独立开发，未使用第三方开源代码
 """统一路径层（开源版）。
 
 所有运行时数据（备份 / 输出 / 日志 / 临时 / 会话）默认落在工程目录下的
@@ -19,7 +22,7 @@ APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_CONFIG_FILE = os.path.join(APP_ROOT, "config.default.yaml")
 LOCAL_CONFIG_FILE = os.path.join(APP_ROOT, "config.local.yaml")
 
-# 兼容旧版本可能注入的环境变量
+# 兼容可能被注入的环境变量
 _LEGACY_ENV_ALIASES = {
     "DSH_CFG_BACKUP_DIR": "DSH_BACKUPS_DIR",
 }

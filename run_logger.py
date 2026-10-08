@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+# 基于质谱峰的蛋白质匹配软件 V1.0
+# Copyright (c) 2026 张葛阳
+# 本软件为独立开发，未使用第三方开源代码
 """Run Logger - structured JSON log for AI analysis"""
 import json, os
 from datetime import datetime

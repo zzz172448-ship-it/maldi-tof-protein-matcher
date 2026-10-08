@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+# 基于质谱峰的蛋白质匹配软件 V1.0
+# Copyright (c) 2026 张葛阳
+# 本软件为独立开发，未使用第三方开源代码
 """Step 3: Peptide-level matching - Theoretical mass vs Experiment m/z"""
 import pandas as pd, os, glob, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -68,7 +71,7 @@ def match_peptides(theoretical_file, experiment_folder, output_file, tolerance=0
                         "mass_tolerance_Da": round(abs(mz - theo["mass"]), 6),
                         "mass_tolerance_ppm": round(abs(mz - theo["mass"]) / theo["mass"] * 1e6, 2) if theo["mass"] else 0,
                     })
-                    # 不 break：保留同一实验峰容差内命中的所有理论肽段（与旧版一致）
+                    # 不 break：保留同一实验峰容差内命中的所有理论肽段（与其他处理模块保持一致）
     
     if all_results:
         result_df = pd.DataFrame(all_results)

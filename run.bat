@@ -1,8 +1,11 @@
 @echo off
+REM Protein Peak-based Protein Matching Software V1.0
+REM Copyright (c) 2026 Zhang Geyang
+REM Independently developed; no third-party open-source code used.
 REM ============================================================
-REM  Protein Data Processing System - Windows launcher (thin shell)
-REM  All logic lives in run.py; environment setup lives in
-REM  env_bootstrap.ps1 (which creates the project-local .venv).
+REM  Windows launcher (thin shell). All logic lives in run.py;
+REM  environment setup lives in env_bootstrap.ps1 (which creates
+REM  the project-local .venv on first run).
 REM  Usage: double-click, or:  run.bat [--port 8000] [--no-browser]
 REM ============================================================
 setlocal

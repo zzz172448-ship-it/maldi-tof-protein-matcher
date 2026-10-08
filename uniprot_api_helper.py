@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+# 基于质谱峰的蛋白质匹配软件 V1.0
+# Copyright (c) 2026 张葛阳
+# 本软件为独立开发，未使用第三方开源代码
 """UniProt REST API Helper"""
 import json, requests, urllib3, sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -45,8 +48,7 @@ class UniProtHelper:
 
         UniProtKB 已删除(DELETED / Inactive)条目的主库 fasta 为空，
         但 uniprotkb/{id}.json 仍返回 extraAttributes.uniParcId，
-        可从 uniparc/{id}.fasta 取到删除前的历史序列（旧版
-        UniProtBackupCrawler 同款路径）。返回序列字符串，取不到返回 None。
+        可从 uniparc/{id}.fasta 取到删除前的历史序列。返回序列字符串，取不到返回 None。
         """
         try:
             resp = self.session.get(

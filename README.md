@@ -1,4 +1,6 @@
-# DSH＋蛋白鉴定系统（Web 版）
+# 基于质谱峰的蛋白质匹配软件
+
+> 版本：V1.0 ｜ 著作权人：张葛阳
 
 一个本地运行、无需云端账号的蛋白质质谱数据鉴定流水线，带 Web 界面（实验数据不出本机）。
 
@@ -64,7 +66,7 @@ python run.py --check      # 只做环境自检（会创建 runtime 目录，不
 ## 3. 目录结构
 
 ```
-DSH_protein_system/
+maldi-tof-protein-matcher/
 ├── run.bat / run.sh          # 薄壳启动脚本（Windows / Linux·macOS）
 ├── run.py                    # 纯 Python 启动入口（检查版本·装依赖·起服务）
 ├── env_bootstrap.ps1         # Windows 环境引导（创建 .venv、装依赖、必要时装 Python）
@@ -72,7 +74,7 @@ DSH_protein_system/
 ├── config.default.yaml       # 默认配置（随仓库分发，请勿直接修改）
 ├── config.local.yaml         # 本机配置（首次在「系统设置」页保存时生成，已被 .gitignore 忽略）
 ├── app_paths.py              # 统一路径层（runtime 子目录解析）
-├── config.py                 # 配置中心（读写配置 + 旧版常量兼容）
+├── config.py                 # 配置中心（读写配置 + 历史常量兼容）
 ├── web_app.py                # Flask 服务（Web 界面 + 四步流水线调度 + DSH 拉起）
 ├── dsh_provider_config.py    # DSH 模型/凭据配置读写
 ├── *_core.py                 # 四步流水线核心模块（含独立命令行自测入口）

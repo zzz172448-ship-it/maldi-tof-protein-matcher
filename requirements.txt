@@ -1,4 +1,4 @@
-# Protein Data Processing System - runtime dependencies (Python >= 3.9)
+# 基于质谱峰的蛋白质匹配软件 - runtime dependencies (Python >= 3.9)
 # Install: python -m pip install -r requirements.txt
 flask>=3.0
 pandas>=2.0,<3.0

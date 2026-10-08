@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
-"""蛋白质数据处理系统 - 配置中心（开源版）。
+# 基于质谱峰的蛋白质匹配软件 V1.0
+# Copyright (c) 2026 张葛阳
+# 本软件为独立开发，未使用第三方开源代码
+"""基于质谱峰的蛋白质匹配软件 - 配置中心（开源版）。
 
 配置层级（后者覆盖前者）：
     代码内置兜底  <  config.default.yaml  <  config.local.yaml
@@ -13,16 +16,20 @@ config.local.yaml 由 Web 界面「系统设置」写入，已被 .gitignore 忽
     CFG.save_local_settings({...}) 写入 config.local.yaml
     CFG.runtime_paths()            当前生效的运行时路径
 
-同时保持旧版常量（BASE_DIR / EXPSY_DEFAULTS / FILENAME_* 等）兼容，
+同时保持历史接口常量（BASE_DIR / EXPSY_DEFAULTS / FILENAME_* 等）兼容，
 各 core 模块可继续按原有方式 import。
 """
+
+# 软件版本号，与界面页脚、软著登记材料保持一致
+__version__ = "1.0"
+
 import os
 import threading
 
 import app_paths
 
 # ============================================================
-#  基础常量（旧版兼容）
+#  基础常量
 # ============================================================
 BASE_DIR = app_paths.APP_ROOT
 

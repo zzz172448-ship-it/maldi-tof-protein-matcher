@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
+# 基于质谱峰的蛋白质匹配软件 V1.0
+# Copyright (c) 2026 张葛阳
+# 本软件为独立开发，未使用第三方开源代码
 """Peptide data crawler - Expasy PeptideMass with URL+POST fallback
 
-修复要点(对照旧版 protein_crawler_core.py 与 Expasy 真实页面):
+修复要点(对照历史实现与 Expasy 真实页面):
   A1 单蛋白级重试: URL/POST 各自 attempt 2 次, 失败 sleep(2) 后重试
   A2 每蛋白请求前随机延迟恢复 0-5s
   A3 错误页三词识别: error / not found / problem
@@ -252,7 +255,7 @@ class PeptideCrawlerCore:
         return None
 
     def _fetch_via_uniparc(self, protein_id, params):
-        """UniParc 归档序列兜底（旧版 UniProtBackupCrawler 路径移植）。
+        """UniParc 归档序列兜底（备用归档序列读取路径）。
 
         场景：Expasy 报 "not a valid uniprotkb identifier"，通常是因为该 ID
         已被 UniProtKB 删除(DELETED, 如不属于参考蛋白组的 TrEMBL 条目)，
@@ -443,7 +446,7 @@ class PeptideCrawlerCore:
         return len(all_failed) == 0, all_failed
 
     def _write_txt_log(self, protein_ids, successful, cache_hits, failed, permanently_failed, retry_count, all_results, output_file):
-        """平移旧版 generate_txt_log_file：生成与输出文件同目录的 *_log.txt 爬虫统计日志"""
+        """生成与输出文件同目录的 *_log.txt 爬虫统计日志"""
         try:
             log_file = os.path.splitext(output_file)[0] + "_log.txt"
             with open(log_file, "w", encoding="utf-8") as f:

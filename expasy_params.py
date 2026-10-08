@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+# 基于质谱峰的蛋白质匹配软件 V1.0
+# Copyright (c) 2026 张葛阳
+# 本软件为独立开发，未使用第三方开源代码
 """Expasy PeptideMass parameter handling - URL builder and form data builder
 
 字段与取值以 2026-09-02 抓取的 Expasy PeptideMass 真实页面为准：
@@ -52,7 +55,7 @@ ENZymes = [
     "No cutting",
 ]
 
-# 旧版/别名 -> 当前页面文本 (兼容历史 run_log / 旧代码传值)
+# 别名 -> 当前页面文本 (兼容历史 run_log / 既有代码传值)
 ENZYME_ALIASES = {
     "Trypsin/P": "Trypsin (C-term to K/R, even before P)",
     "Trypsin(higher specificity)": "Trypsin (higher specificity)",
