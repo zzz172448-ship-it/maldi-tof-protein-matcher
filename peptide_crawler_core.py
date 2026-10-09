@@ -28,6 +28,9 @@ logger = logging.getLogger(__name__)
 ERROR_MARKERS = ("error", "not found", "problem")
 INVALID_MARKER = "not a valid uniprotkb identifier"
 INVALID_RESPONSE = "INVALID_ID"
+# UniParc 兜底阶段瞬时故障（429/模板/网络异常）的重试上限；
+# 仅当 UniParc 也无归档序列时才判定为确定性无效永久跳过。
+UNIPARC_RETRY_LIMIT = 20
 
 CACHE_COLS = ["Protein ID", "mass", "position", "#MC", "modifications",
               "peptide sequence", "params_fp"]
@@ -262,27 +265,44 @@ class PeptideCrawlerCore:
         主库 fasta 为空但 UniParc 归档仍保留历史序列。取到序列后以
         "序列粘贴"模式重新提交 Expasy PeptideMass（该模式只做酶切、不校验
         ID），酶/漏切位点/修饰等参数仍按用户当前 UI 配置走。
-        返回肽段列表；取不到归档序列或提交失败返回 None。
+
+        返回三态：
+          - 肽段列表：兜底成功
+          - INVALID_RESPONSE：UniParc 也无归档序列（确定性无效，永久跳过）
+          - None：瞬时故障（网络/HTTP 限流/模板/解析异常），经
+            UNIPARC_RETRY_LIMIT 次重试后仍失败，交上层重试集合继续尝试
         """
-        try:
-            seq = self.uniprot_helper.get_uniparc_sequence(protein_id)
-        except Exception as e:
-            self.log_message(f"  UniParc lookup error for {protein_id}: {e}")
+        # 1) 取归档序列：helper 抛 RuntimeError 表示瞬时故障，最多重试
+        #    UNIPARC_RETRY_LIMIT 次；helper 返回 None 表示确定性无效。
+        seq = None
+        last_lookup_err = ""
+        for lookup_attempt in range(1, UNIPARC_RETRY_LIMIT + 1):
+            if not self.is_running:
+                return None
+            try:
+                seq = self.uniprot_helper.get_uniparc_sequence(protein_id)
+                break
+            except Exception as e:
+                last_lookup_err = str(e)
+                self.log_message(f"  UniParc lookup error for {protein_id} (attempt {lookup_attempt}/{UNIPARC_RETRY_LIMIT}): {e}")
+                time.sleep(2)
+        if seq is None and last_lookup_err:
+            self.log_message(f"  {protein_id}: UniParc lookup failed after {UNIPARC_RETRY_LIMIT} attempts, last error: {last_lookup_err}")
             return None
         if not seq:
-            self.log_message(f"  {protein_id}: UniParc fallback failed, no archived sequence")
-            return None
+            self.log_message(f"  {protein_id}: UniParc fallback failed, no archived sequence (permanent invalid)")
+            return INVALID_RESPONSE
         self.log_message(f"  {protein_id}: UniParc fallback, archived sequence len={len(seq)}")
-        for attempt in range(1, 3):
+        # 2) 序列粘贴模式提交 Expasy：瞬时故障全部重试，上限 UNIPARC_RETRY_LIMIT 次
+        for attempt in range(1, UNIPARC_RETRY_LIMIT + 1):
             if not self.is_running:
                 return None
             template = self._ensure_form_template()
             if template is None:
-                if attempt == 1:
-                    self._form_template = None
-                    time.sleep(2)
-                    continue
-                return None
+                # 模板获取失败属瞬时故障，刷新后重试
+                self._form_template = None
+                time.sleep(2)
+                continue
             try:
                 data = dict(template)
                 data.update(params.to_form_data(protein_id))  # 酶/MC/修饰等按 UI 参数
@@ -293,11 +313,9 @@ class PeptideCrawlerCore:
                 if status == 429:
                     # Expasy 限流: 退避后重试，避免把临时限流误判成永久无效
                     self.log_message(f"[SEQ#{attempt}] {protein_id}: HTTP 429 rate limit, backoff 8s")
-                    if attempt == 1:
-                        self._form_template = None
-                        time.sleep(8)
-                        continue
-                    return None
+                    self._form_template = None
+                    time.sleep(8)
+                    continue
                 if status == 200 and not _looks_like_error_page(resp.text):
                     peptides = self.parse_peptide_data(resp.text, protein_id)
                     if peptides:
@@ -306,14 +324,12 @@ class PeptideCrawlerCore:
                     self.log_message(f"[SEQ#{attempt}] {protein_id}: HTTP {status}, len={length}, parsed=0 (sequence mode)")
                 snippet = re.sub(r"\s+", " ", resp.text[:200])
                 self.log_message(f"[SEQ#{attempt}] {protein_id}: HTTP {status}, len={length}, suspicious head={snippet!r}")
-                if attempt == 1:
-                    self._form_template = None  # 怀疑模板过期，强制刷新一次
-                    time.sleep(2)
+                self._form_template = None  # 怀疑模板过期，强制刷新一次
+                time.sleep(2)
             except Exception as e:
                 self.log_message(f"[SEQ#{attempt}] {protein_id}: exception {e}")
-                if attempt == 1:
-                    self._form_template = None
-                    time.sleep(2)
+                self._form_template = None
+                time.sleep(2)
         return None
 
     def fetch_peptides(self, protein_id, params):
@@ -325,12 +341,17 @@ class PeptideCrawlerCore:
         peptides = self.fetch_via_url(protein_id, params)
         if peptides == INVALID_RESPONSE:
             # Expasy 不认该 ID（通常是 UniProtKB 已删条目）：
-            # 先走 UniParc 归档序列兜底，成功返回肽段，失败才永久跳过
+            # 先走 UniParc 归档序列兜底；三态区分：真无效永久跳过，
+            # 瞬时故障交上层重试集合。
             fallback = self._fetch_via_uniparc(protein_id, params)
+            if fallback == INVALID_RESPONSE:
+                self.log_message(f"  {protein_id}: UniParc has no archived sequence, excluded permanently")
+                return INVALID_RESPONSE
             if fallback:
                 self.log_message(f"  UniParc fallback OK for {protein_id}: {len(fallback)} peptides")
                 return fallback
-            return INVALID_RESPONSE
+            self.log_message(f"  {protein_id}: UniParc fallback transient failure, will retry")
+            return None
         if peptides:
             self.log_message(f"  URL fetch OK for {protein_id}: {len(peptides)} peptides")
             return peptides
@@ -340,10 +361,14 @@ class PeptideCrawlerCore:
         if peptides == INVALID_RESPONSE:
             # 同上：URL 无果后 POST 也报 invalid，同样尝试 UniParc 兜底
             fallback = self._fetch_via_uniparc(protein_id, params)
+            if fallback == INVALID_RESPONSE:
+                self.log_message(f"  {protein_id}: UniParc has no archived sequence, excluded permanently")
+                return INVALID_RESPONSE
             if fallback:
                 self.log_message(f"  UniParc fallback OK for {protein_id}: {len(fallback)} peptides")
                 return fallback
-            return INVALID_RESPONSE
+            self.log_message(f"  {protein_id}: UniParc fallback transient failure, will retry")
+            return None
         if peptides:
             self.log_message(f"  POST fetch OK for {protein_id}: {len(peptides)} peptides")
             return peptides
@@ -367,11 +392,13 @@ class PeptideCrawlerCore:
 
         cache_hits = 0
         to_fetch = []
+        protein_stats = {}
         for pid in protein_ids:
             cached = self._cache_hit(pid, fp)
             if cached:
                 cache_hits += 1
                 all_results.extend(cached)
+                protein_stats[pid] = {"status": "缓存命中", "peptides": len(cached), "note": ""}
             else:
                 to_fetch.append(pid)
         if cache_hits:
@@ -379,7 +406,7 @@ class PeptideCrawlerCore:
         if not to_fetch:
             self.log_message("All proteins served from cache; skipping network crawl")
             self._write_output(output_file, all_results)
-            self._write_txt_log(protein_ids, set(), cache_hits, set(), set(), 0, all_results, output_file)
+            self._write_txt_log(protein_ids, set(), cache_hits, set(), set(), 0, all_results, output_file, protein_stats)
             return True, []
 
         self.log_message(f"Starting crawl for {len(to_fetch)} proteins (cache-hit {cache_hits}), workers={max_workers}")
@@ -406,19 +433,23 @@ class PeptideCrawlerCore:
                         peptides = future.result()
                         if peptides == INVALID_RESPONSE:
                             permanently_failed.add(pid)
+                            protein_stats[pid] = {"status": "永久无效", "peptides": 0, "note": "UniProtKB 与 UniParc 均无序列"}
                             self.log_message(f"  {pid}: INVALID UniProtKB ID, excluded permanently")
                             continue
                         if peptides:
                             all_results.extend(peptides)
                             successful.add(pid)
+                            protein_stats[pid] = {"status": "成功", "peptides": len(peptides), "note": ""}
                             for p in peptides:
                                 key = f"{pid}_{p['mass']}_{p.get('peptide sequence', '')}"
                                 self.cache_by_fp.setdefault(fp, {}).setdefault(pid, {})[key] = p
                         else:
                             current_failed.add(pid)
+                            protein_stats[pid] = {"status": "失败", "peptides": 0, "note": "重试耗尽仍失败"}
                     except Exception as e:
                         self.log_message(f"  Error processing {pid}: {e}")
                         current_failed.add(pid)
+                        protein_stats[pid] = {"status": "失败", "peptides": 0, "note": f"处理异常: {e}"}
 
             self._save_cache()  # D2 每轮增量落盘
             if not current_failed:
@@ -441,11 +472,11 @@ class PeptideCrawlerCore:
         self._save_cache()
         self._write_output(output_file, all_results)
         self.log_message(f"Final: {len(successful)} succeeded (+{cache_hits} cached), {len(failed)} failed, {len(permanently_failed)} invalid-ID skipped")
-        self._write_txt_log(protein_ids, successful, cache_hits, failed, permanently_failed, retry_count, all_results, output_file)
+        self._write_txt_log(protein_ids, successful, cache_hits, failed, permanently_failed, retry_count, all_results, output_file, protein_stats)
         all_failed = sorted(set(failed) | permanently_failed)
         return len(all_failed) == 0, all_failed
 
-    def _write_txt_log(self, protein_ids, successful, cache_hits, failed, permanently_failed, retry_count, all_results, output_file):
+    def _write_txt_log(self, protein_ids, successful, cache_hits, failed, permanently_failed, retry_count, all_results, output_file, protein_stats=None):
         """生成与输出文件同目录的 *_log.txt 爬虫统计日志"""
         try:
             log_file = os.path.splitext(output_file)[0] + "_log.txt"
@@ -469,6 +500,14 @@ class PeptideCrawlerCore:
                     f.write("无效UniProtKB ID跳过列表:\n")
                     for i, pid in enumerate(sorted(permanently_failed), 1):
                         f.write(f"  {i}. {pid}\n")
+                f.write("=" * 50 + "\n")
+                f.write("单蛋白明细(按输入顺序):\n")
+                if protein_stats:
+                    for i, pid in enumerate(protein_ids, 1):
+                        info = protein_stats.get(pid) or {"status": "未知", "peptides": 0, "note": ""}
+                        f.write(f"  {i}. {pid} | {info.get('status', '未知')} | 肽段 {info.get('peptides', 0)} | {info.get('note', '')}\n")
+                else:
+                    f.write("  (无明细数据)\n")
                 f.write("=" * 50 + "\n")
             self.log_message(f"爬虫日志文件已保存到 {log_file}")
         except Exception as e:

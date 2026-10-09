@@ -48,33 +48,49 @@ class UniProtHelper:
 
         UniProtKB 已删除(DELETED / Inactive)条目的主库 fasta 为空，
         但 uniprotkb/{id}.json 仍返回 extraAttributes.uniParcId，
-        可从 uniparc/{id}.fasta 取到删除前的历史序列。返回序列字符串，取不到返回 None。
+        可从 uniparc/{id}.fasta 取到删除前的历史序列。
+
+        返回约定：
+          - 序列字符串：归档序列可用
+          - None：确定性无效（UniParc 确无归档序列，或序列不可用）
+          - 抛 RuntimeError：瞬时故障（网络错误 / HTTP 非 200 / 响应损坏），
+            调用方应重试而非判死
         """
         try:
             resp = self.session.get(
                 f"{UNIPROT_BASE}/uniprotkb/{protein_id}.json",
                 timeout=UNIPROT_TIMEOUT, verify=False)
-            if resp.status_code != 200:
-                return None
+        except Exception as e:
+            raise RuntimeError(f"uniprotkb/{protein_id} network error: {e}") from e
+        if resp.status_code != 200:
+            raise RuntimeError(f"uniprotkb/{protein_id} HTTP {resp.status_code}")
+        try:
             data = resp.json()
-            upid = (data.get("extraAttributes") or {}).get("uniParcId")
-            if not upid:
-                return None
+        except Exception as e:
+            raise RuntimeError(f"uniprotkb/{protein_id} bad json: {e}") from e
+        upid = (data.get("extraAttributes") or {}).get("uniParcId")
+        if not upid:
+            # JSON 正常返回但无归档 ID：该条目确实没有 UniParc 记录，属确定性无效
+            return None
+        try:
             fasta_resp = self.session.get(
                 f"{UNIPROT_BASE}/uniparc/{upid}.fasta",
                 timeout=UNIPROT_TIMEOUT, verify=False)
-            if fasta_resp.status_code != 200 or not fasta_resp.text.strip().startswith(">"):
-                return None
-            lines = fasta_resp.text.strip().split("\n")
-            seq = "".join(lines[1:]).replace("\n", "").replace(" ", "")
-            valid_chars = set("ACDEFGHIKLMNPQRSTVWY")
-            if len(seq) < 20:
-                return None
-            seq_upper = seq.upper()
-            valid_ratio = sum(1 for c in seq_upper if c in valid_chars) / len(seq_upper)
-            return seq if valid_ratio >= 0.9 else None
-        except Exception:
+        except Exception as e:
+            raise RuntimeError(f"uniparc/{upid} network error: {e}") from e
+        if fasta_resp.status_code != 200:
+            raise RuntimeError(f"uniparc/{upid} HTTP {fasta_resp.status_code}")
+        if not fasta_resp.text.strip().startswith(">"):
+            # 200 但内容不是 FASTA：该归档序列不可用，属确定性无效
             return None
+        lines = fasta_resp.text.strip().split("\n")
+        seq = "".join(lines[1:]).replace("\n", "").replace(" ", "")
+        valid_chars = set("ACDEFGHIKLMNPQRSTVWY")
+        if len(seq) < 20:
+            return None
+        seq_upper = seq.upper()
+        valid_ratio = sum(1 for c in seq_upper if c in valid_chars) / len(seq_upper)
+        return seq if valid_ratio >= 0.9 else None
 
     def search_by_taxon(self, taxon_id, size=100):
         try:
